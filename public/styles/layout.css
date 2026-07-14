@@ -1,0 +1,19 @@
+/* Layout */
+main {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 2rem var(--spacing-lg);
+    min-height: calc(100vh - 140px);
+}
+
+.page h1 {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-lg);
+    color: var(--color-heading);
+}
+
+@media (max-width: 600px) {
+    main {
+        padding: var(--spacing-md);
+    }
+}

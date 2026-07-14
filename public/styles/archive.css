@@ -1,0 +1,20 @@
+/* Content tree */
+.content-tree {
+    list-style: none;
+    padding-left: 0;
+}
+
+.content-tree ul {
+    list-style: none;
+    padding-left: var(--spacing-lg);
+    margin-top: var(--spacing-xs);
+}
+
+.content-tree li {
+    margin: var(--spacing-xs) 0;
+}
+
+.content-tree .folder {
+    font-weight: 600;
+    color: var(--color-muted);
+}
