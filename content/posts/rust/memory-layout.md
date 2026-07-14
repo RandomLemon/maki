@@ -1,12 +1,45 @@
 ---
-title: Rust And Leptos
-date: 2026-07-13
-tags: [rust, leptos]
-summary: Introduce Rust and Leptos
+title: Rust 内存布局浅析
+date: 2024-01-15
+tags: [rust, memory]
+summary: 介绍 Rust 中常见数据结构的内存布局，帮助理解所有权与借用。
 ---
 
-# Rust and Leptos
+# Rust 内存布局浅析
 
-Leptos is a cutting-edge Rust framework for the modern web.
+Rust 的内存安全很大程度上依赖于编译期对所有权、生命周期和借用的检查。理解数据在内存中的排布，有助于写出更高效的代码。
 
-For more information, please refer to [leptos website](https://www.leptos.dev/).
+## 基本类型
+
+标量类型如 `i32`、`f64`、`bool` 都保存在栈上，大小固定：
+
+```rust
+let x: i32 = 42;      // 4 字节
+let y: bool = true;   // 1 字节
+```
+
+## 复合类型
+
+### Tuple
+
+Tuple 的元素在内存中连续存放：
+
+```rust
+let t: (i32, u8) = (1, 2);
+```
+
+### Struct
+
+结构体字段默认按声明顺序排列，但编译器可能会进行字段重排以优化内存：
+
+```rust
+#[repr(C)]
+struct Point {
+    x: f64,
+    y: f64,
+}
+```
+
+## 总结
+
+掌握内存布局后，我们就能更合理地选择 `Box`、`Vec`、`Rc` 等类型，在安全性与性能之间取得平衡。

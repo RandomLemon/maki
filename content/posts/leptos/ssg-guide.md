@@ -1,8 +1,8 @@
 ---
 title: 用 Leptos 做静态站点生成
-date: 2026-07-13
+date: 2024-02-20
 tags: [leptos, rust, ssg]
-summary: 记录使用 Leptos 0.7 构建纯静态博客的关键步骤
+summary: 记录使用 Leptos 0.7 构建纯静态博客的关键步骤与踩坑经验。
 ---
 
 # 用 Leptos 做静态站点生成

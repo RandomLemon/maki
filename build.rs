@@ -199,6 +199,7 @@ fn scan_posts(dir: &Path) -> Vec<Post> {
 fn scan_pages(dir: &Path) -> Vec<StaticPage> {
     let mut pages = Vec::new();
     for entry in WalkDir::new(dir)
+        .follow_links(true)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
@@ -209,13 +210,23 @@ fn scan_pages(dir: &Path) -> Vec<StaticPage> {
         let slug = rel.with_extension("").to_string_lossy().replace('\\', "/");
 
         let raw = fs::read_to_string(path).expect("failed to read markdown file");
-        let doc: yaml_front_matter::Document<PageMeta> =
-            YamlFrontMatter::parse::<PageMeta>(&raw).expect("failed to parse frontmatter");
+
+        let (title, content) = if let Ok(doc) = YamlFrontMatter::parse::<PageMeta>(&raw) {
+            (doc.metadata.title, doc.content)
+        } else {
+            let title = raw
+                .lines()
+                .next()
+                .and_then(|line| line.strip_prefix("# "))
+                .map(|s| s.trim().to_string())
+                .unwrap_or_else(|| "关于".to_string());
+            (title, raw)
+        };
 
         pages.push(StaticPage {
             slug,
-            title: doc.metadata.title,
-            content_html: markdown_to_html(&doc.content),
+            title,
+            content_html: markdown_to_html(&content),
         });
     }
     pages
