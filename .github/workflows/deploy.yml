@@ -29,7 +29,7 @@ jobs:
 
       - name: Build site
         env:
-          MAKI_BASE_URL: "/"
+          MAKI_BASE_URL: "/maki"
         run: |
           nix develop --command cargo run --release
 
