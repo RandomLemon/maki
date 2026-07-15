@@ -1,9 +1,10 @@
 use leptos::prelude::*;
 use leptos_router::{RouteList, location::RequestUrl};
 use maki::App;
+use maki::content::BASE_URL;
 use std::collections::HashSet;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 fn render_path(path: &str) -> String {
     let owner = Owner::new();
@@ -68,11 +69,22 @@ fn merge_styles(out: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+fn output_root() -> PathBuf {
+    let base = BASE_URL.trim_end_matches('/');
+    if base.is_empty() {
+        PathBuf::from("dist")
+    } else {
+        PathBuf::from("dist").join(base.trim_start_matches('/'))
+    }
+}
+
 fn main() {
+    let out_root = output_root();
+
     if Path::new("dist").exists() {
         fs::remove_dir_all("dist").expect("failed to clean dist directory");
     }
-    fs::create_dir_all("dist").expect("failed to create dist directory");
+    fs::create_dir_all(&out_root).expect("failed to create output directory");
 
     let routes = Owner::new()
         .with(|| {
@@ -86,24 +98,29 @@ fn main() {
     let mut sorted_paths: Vec<String> = unique_paths.into_iter().collect();
     sorted_paths.sort();
 
+    let base = BASE_URL.trim_end_matches('/');
     for path in sorted_paths {
         let html = render_path(&path);
-        let file = if path == "/" {
-            "dist/index.html".to_string()
+        let relative = path
+            .strip_prefix(base)
+            .unwrap_or(&path)
+            .trim_start_matches('/')
+            .trim_end_matches('/');
+        let file = if relative.is_empty() {
+            out_root.join("index.html")
         } else {
-            format!("dist{}/index.html", path.trim_end_matches('/'))
+            out_root.join(relative).join("index.html")
         };
-        fs::create_dir_all(Path::new(&file).parent().unwrap())
-            .expect("failed to create output directory");
+        fs::create_dir_all(file.parent().unwrap()).expect("failed to create output directory");
         fs::write(&file, html).expect("failed to write html file");
-        println!("generated: {}", file);
+        println!("generated: {}", file.display());
     }
 
-    merge_styles(Path::new("dist/style.css")).expect("failed to merge styles");
+    merge_styles(&out_root.join("style.css")).expect("failed to merge styles");
 
     if Path::new("public").exists() {
-        copy_dir_all("public", "dist", &["styles"]).expect("failed to copy public assets");
+        copy_dir_all("public", &out_root, &["styles"]).expect("failed to copy public assets");
     }
 
-    println!("site generated in `dist/`");
+    println!("site generated in `{}`", out_root.display());
 }
