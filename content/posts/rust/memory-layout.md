@@ -1,6 +1,6 @@
 ---
 title: Rust 内存布局浅析
-date: 2024-01-15
+date: 2026-07-15
 tags: [rust, memory]
 summary: 介绍 Rust 中常见数据结构的内存布局，帮助理解所有权与借用。
 ---
