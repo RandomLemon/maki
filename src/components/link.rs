@@ -1,13 +1,5 @@
-use crate::content::BASE_URL;
+use crate::base::full_href;
 use leptos::prelude::*;
-
-fn full_href(href: &str) -> String {
-    if href.starts_with('/') {
-        format!("{}{}", BASE_URL.trim_end_matches('/'), href)
-    } else {
-        href.to_string()
-    }
-}
 
 #[component]
 pub fn Link(

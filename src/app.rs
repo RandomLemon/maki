@@ -1,5 +1,5 @@
+use crate::base::base_prefix;
 use crate::components::{Footer, Navbar};
-use crate::content::BASE_URL;
 use crate::pages::{Archive, Home, NotFound, PostDetail, StaticPageView, TagPosts, Tags};
 use leptos::prelude::*;
 use leptos_router::{
@@ -11,8 +11,8 @@ use leptos_router::{
 
 #[component]
 pub fn App() -> impl IntoView {
-    let router_base = if BASE_URL == "/" { "" } else { BASE_URL };
-    let css_path = format!("{}/style.css", BASE_URL.trim_end_matches('/'));
+    let router_base = base_prefix();
+    let css_path = format!("{}/style.css", router_base);
 
     view! {
         <html lang="zh-CN">

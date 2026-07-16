@@ -404,6 +404,11 @@ fn main() {
     let base_url = base_url.trim_end_matches('/').to_string();
     let base_url = if base_url.is_empty() {
         "/".to_string()
+    } else if !base_url.starts_with('/') {
+        panic!(
+            "MAKI_BASE_URL must be an absolute path starting with '/' (got {:?})",
+            base_url
+        );
     } else {
         base_url
     };

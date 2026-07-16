@@ -1,4 +1,5 @@
 pub mod app;
+pub mod base;
 pub mod components;
 pub mod content;
 pub mod models;
