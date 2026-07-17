@@ -3,9 +3,9 @@ use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
-use syntect::highlighting::ThemeSet;
-use syntect::html::highlighted_html_for_string;
+use syntect::html::{ClassStyle, ClassedHTMLGenerator};
 use syntect::parsing::SyntaxSet;
+use syntect::util::LinesWithEndings;
 use walkdir::WalkDir;
 use yaml_front_matter::YamlFrontMatter;
 
@@ -86,8 +86,6 @@ fn plain_text_summary(html: &str) -> String {
 
 fn markdown_to_html(input: &str) -> String {
     let ss = SyntaxSet::load_defaults_newlines();
-    let ts = ThemeSet::load_defaults();
-    let theme = &ts.themes["base16-ocean.dark"];
 
     let parser = Parser::new(input);
     let mut events: Vec<Event> = Vec::new();
@@ -107,13 +105,19 @@ fn markdown_to_html(input: &str) -> String {
             Event::End(TagEnd::CodeBlock) => {
                 in_code = false;
                 let html = if lang.is_empty() {
-                    format!("<pre><code>{}</code></pre>", html_escape(&code_text))
+                    format!("<pre class=\"code-block\"><code>{}</code></pre>", html_escape(&code_text))
                 } else {
                     let syntax = ss
                         .find_syntax_by_token(&lang)
                         .unwrap_or_else(|| ss.find_syntax_plain_text());
-                    highlighted_html_for_string(&code_text, &ss, syntax, theme).unwrap_or_else(
-                        |_| format!("<pre><code>{}</code></pre>", html_escape(&code_text)),
+                    let mut html_gen =
+                        ClassedHTMLGenerator::new_with_class_style(syntax, &ss, ClassStyle::Spaced);
+                    for line in LinesWithEndings::from(&code_text) {
+                        let _ = html_gen.parse_html_for_line_which_includes_newline(line);
+                    }
+                    format!(
+                        "<pre class=\"code-block\"><code>{}</code></pre>",
+                        html_gen.finalize()
                     )
                 };
                 events.push(Event::Html(html.into()));

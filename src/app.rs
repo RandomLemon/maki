@@ -9,6 +9,11 @@ use leptos_router::{
     static_routes::{StaticParamsMap, StaticRoute},
 };
 
+/// 在样式表应用前同步执行,根据 localStorage 或系统偏好设置主题,
+/// 避免页面以默认浅色渲染后再切换造成的闪烁(FOUC)。
+/// 未手动选择时还会监听系统主题变化,实现实时同步。
+const THEME_INIT_SCRIPT: &str = "(function(){var doc=document.documentElement,key='maki-theme',saved=null;try{saved=localStorage.getItem(key);}catch(e){}function applyTheme(){var t=saved;if(t!=='light'&&t!=='dark'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}doc.setAttribute('data-theme',t);}applyTheme();if(saved!=='light'&&saved!=='dark'){try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);}catch(e){}}})();";
+
 #[component]
 pub fn App() -> impl IntoView {
     let router_base = base_prefix();
@@ -19,6 +24,7 @@ pub fn App() -> impl IntoView {
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <script>{THEME_INIT_SCRIPT}</script>
                 <title>"Maki"</title>
                 <link rel="stylesheet" href=css_path />
             </head>

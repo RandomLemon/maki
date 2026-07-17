@@ -1,0 +1,102 @@
+/* 代码块高亮:syntect 输出的是带 class 的 <span>,这里按 scope 原子映射配色。
+   ClassStyle::Spaced 将如 `string.quoted.double` 拆为 `string quoted double`,
+   嵌套 span 也带整套 scope,因此选择器只需命中通用原子即可。 */
+
+.markdown-body pre {
+    background: var(--color-code-block-bg);
+    border: 1px solid var(--color-code-block-border);
+    color: var(--syntax-variable);
+}
+
+.markdown-body pre code {
+    font-family: var(--font-mono);
+    background: transparent;
+    padding: 0;
+    color: inherit;
+}
+
+.markdown-body pre .comment,
+.markdown-body pre .punctuation.definition.comment {
+    color: var(--syntax-comment);
+    font-style: italic;
+}
+
+.markdown-body pre .string,
+.markdown-body pre .string.quoted,
+.markdown-body pre .string.interpolated,
+.markdown-body pre .string.regexp,
+.markdown-body pre .meta.string {
+    color: var(--syntax-string);
+}
+
+.markdown-body pre .constant,
+.markdown-body pre .constant.numeric,
+.markdown-body pre .constant.language,
+.markdown-body pre .constant.character,
+.markdown-body pre .constant.other,
+.markdown-body pre .support.constant {
+    color: var(--syntax-constant);
+}
+
+.markdown-body pre .keyword,
+.markdown-body pre .keyword.control,
+.markdown-body pre .keyword.operator,
+.markdown-body pre .keyword.other,
+.markdown-body pre .meta.selector,
+.markdown-body pre .support.type.exception {
+    color: var(--syntax-keyword);
+}
+
+.markdown-body pre .storage,
+.markdown-body pre .storage.type,
+.markdown-body pre .storage.modifier {
+    color: var(--syntax-storage);
+}
+
+.markdown-body pre .entity.name.function,
+.markdown-body pre .support.function,
+.markdown-body pre .meta.function-call {
+    color: var(--syntax-function);
+}
+
+.markdown-body pre .entity.name.class,
+.markdown-body pre .entity.name.type,
+.markdown-body pre .entity.name.struct,
+.markdown-body pre .entity.name.enum,
+.markdown-body pre .entity.name.interface,
+.markdown-body pre .storage.type.class,
+.markdown-body pre .support.type {
+    color: var(--syntax-type);
+}
+
+.markdown-body pre .entity.other.attribute-name,
+.markdown-body pre .entity.other.inherited-class {
+    color: var(--syntax-attribute);
+}
+
+.markdown-body pre .variable,
+.markdown-body pre .meta.variable,
+.markdown-body pre .support.other.variable {
+    color: var(--syntax-variable);
+}
+
+.markdown-body pre .variable.parameter,
+.markdown-body pre .meta.parameters .variable,
+.markdown-body pre .meta.function.parameters .variable {
+    color: var(--syntax-parameter);
+}
+
+.markdown-body pre .support.class,
+.markdown-body pre .support.type,
+.markdown-body pre .support.constant {
+    color: var(--syntax-support);
+}
+
+.markdown-body pre .punctuation {
+    color: var(--syntax-punctuation);
+}
+
+.markdown-body pre .entity.name.tag,
+.markdown-body pre .meta.tag {
+    color: var(--syntax-keyword);
+}

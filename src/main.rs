@@ -52,6 +52,7 @@ fn merge_styles(out: &Path) -> std::io::Result<()> {
         "navbar.css",
         "post.css",
         "markdown.css",
+        "syntax.css",
         "archive.css",
         "tags.css",
         "footer.css",
