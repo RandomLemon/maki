@@ -20,3 +20,26 @@ a {
 a:hover {
     text-decoration: underline;
 }
+
+/* 主题切换过渡:仅在 <html> 显式带 .theme-transition 时启用,
+   故首屏 anti-FOUC 设置 data-theme 不会触发任何动画。
+   限定 transition-property 白名单,避免 width/transform 等引起重排。 */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+    transition:
+        color 0.3s ease,
+        background-color 0.3s ease,
+        border-color 0.3s ease,
+        fill 0.3s ease,
+        stroke 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+/* View Transitions API:让默认 crossfade 稍慢更柔和 */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 0.35s;
+    animation-timing-function: ease;
+}

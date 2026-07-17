@@ -2,8 +2,10 @@ use crate::components::Link;
 use leptos::prelude::*;
 
 /// 切换按钮点击事件:在 light/dark 之间翻转并持久化到 localStorage。
-/// 图标显隐由 CSS 据 `html[data-theme]` 控制,脚本无需操作 DOM 文本。
-const THEME_TOGGLE_SCRIPT: &str = "(function(){var doc=document.documentElement;var btn=document.getElementById('theme-toggle');if(!btn){return;}btn.addEventListener('click',function(){var cur=doc.getAttribute('data-theme');var next=cur==='dark'?'light':'dark';doc.setAttribute('data-theme',next);try{localStorage.setItem('maki-theme',next);}catch(e){}});})();";
+/// 优先用 View Transitions API 做整页 crossfade;不支持时退回 CSS 过渡兜底。
+/// `.theme-transition` 类只在此刻临时挂上,结束后摘除,
+/// 从而不污染首屏 anti-FOUC 逻辑、也不影响 hover/focus 等运行期样式变化。
+const THEME_TOGGLE_SCRIPT: &str = "(function(){var doc=document.documentElement;var btn=document.getElementById('theme-toggle');if(!btn){return;}var DURATION=350;function apply(next){doc.setAttribute('data-theme',next);try{localStorage.setItem('maki-theme',next);}catch(e){}}btn.addEventListener('click',function(){var cur=doc.getAttribute('data-theme');var next=cur==='dark'?'light':'dark';if(doc.startViewTransition){doc.classList.add('theme-transition');var t=doc.startViewTransition(function(){apply(next);});t.finished.finally(function(){doc.classList.remove('theme-transition');});}else{doc.classList.add('theme-transition');apply(next);setTimeout(function(){doc.classList.remove('theme-transition');},DURATION);}});})();";
 
 #[component]
 pub fn Navbar() -> impl IntoView {
