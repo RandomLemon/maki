@@ -384,11 +384,29 @@ fn write_node(buf: &mut String, node: &ContentNode, is_root: bool) {
 }
 
 fn main() {
-    println!("cargo::rerun-if-changed=content");
-    println!("cargo::rerun-if-env-changed=MAKI_BASE_URL");
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let content_dir = match std::env::var_os("MAKI_CONTENT_DIR") {
+        Some(value) if !value.is_empty() => {
+            let path = PathBuf::from(value);
+            let path = if path.is_absolute() {
+                path
+            } else {
+                manifest_dir.join(path)
+            };
+            if !path.is_dir() {
+                panic!("MAKI_CONTENT_DIR is not a directory: {}", path.display());
+            }
+            path
+        }
+        _ => manifest_dir.join("content"),
+    };
 
-    let posts_dir = PathBuf::from("content/posts");
-    let pages_dir = PathBuf::from("content/pages");
+    println!("cargo::rerun-if-env-changed=MAKI_CONTENT_DIR");
+    println!("cargo::rerun-if-env-changed=MAKI_BASE_URL");
+    println!("cargo::rerun-if-changed={}", content_dir.display());
+
+    let posts_dir = content_dir.join("posts");
+    let pages_dir = content_dir.join("pages");
 
     let posts = if posts_dir.exists() {
         scan_posts(&posts_dir)
