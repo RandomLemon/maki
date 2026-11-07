@@ -4,7 +4,7 @@ use leptos::prelude::*;
 pub fn Footer() -> impl IntoView {
     view! {
         <footer class="footer">
-            <p>"Powered by Rust + Leptos"</p>
+            <p>"Powered by "<a href="https://github.com/RandomLemon/maki">"Maki"</a></p>
         </footer>
     }
 }
