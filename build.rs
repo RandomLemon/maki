@@ -1,5 +1,5 @@
 use chrono::{Datelike, NaiveDate};
-use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
+use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -87,7 +87,7 @@ fn plain_text_summary(html: &str) -> String {
 fn markdown_to_html(input: &str) -> String {
     let ss = SyntaxSet::load_defaults_newlines();
 
-    let parser = Parser::new(input);
+    let parser = Parser::new_ext(input, Options::ENABLE_TABLES);
     let mut events: Vec<Event> = Vec::new();
     let mut in_code = false;
     let mut lang = String::new();
@@ -126,6 +126,14 @@ fn markdown_to_html(input: &str) -> String {
             }
             Event::Text(text) if in_code => {
                 code_text.push_str(&text);
+            }
+            Event::Start(Tag::Table(alignments)) => {
+                events.push(Event::Html("<div class=\"table-wrapper\">".into()));
+                events.push(Event::Start(Tag::Table(alignments)));
+            }
+            Event::End(TagEnd::Table) => {
+                events.push(Event::End(TagEnd::Table));
+                events.push(Event::Html("</div>".into()));
             }
             other => events.push(other),
         }

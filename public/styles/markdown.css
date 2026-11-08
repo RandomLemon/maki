@@ -50,3 +50,30 @@
     color: var(--color-blockquote);
     border-left: 0.25rem solid var(--color-blockquote-border);
 }
+
+.markdown-body .table-wrapper {
+    margin: 0 0 var(--spacing-md) 0;
+    overflow-x: auto;
+}
+
+.markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.markdown-body th,
+.markdown-body td {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--color-border);
+    text-align: left;
+}
+
+.markdown-body th {
+    background: var(--color-code-bg);
+    color: var(--color-heading);
+    font-weight: 600;
+}
+
+.markdown-body tbody tr:nth-child(even) {
+    background: var(--color-bg);
+}
