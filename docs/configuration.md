@@ -193,7 +193,7 @@ const ROOT_LEVEL_FILES: &[&str] = &[".nojekyll", "CNAME"];
 
 仓库自带 `.github/workflows/deploy.yml`：
 
-- 触发：推送到 `main`，或手动 `workflow_dispatch`。
+- 触发：推送任意 tag，或发布 GitHub Release（`release: types: [published]`）。推送到 `main` 不会触发部署。
 - 权限：`contents: read`、`pages: write`、`id-token: write`。
 - 构建：
   - 安装 Nix 和缓存；
