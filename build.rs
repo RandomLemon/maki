@@ -210,7 +210,9 @@ fn scan_posts(dir: &Path) -> Vec<Post> {
 
 fn scan_pages(dir: &Path) -> Vec<StaticPage> {
     let mut pages = Vec::new();
+    // 独立页面只来自内容目录根部的 .md 文件；posts/ 等子目录不参与页面扫描。
     for entry in WalkDir::new(dir)
+        .max_depth(1)
         .follow_links(true)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -414,7 +416,6 @@ fn main() {
     println!("cargo::rerun-if-changed={}", content_dir.display());
 
     let posts_dir = content_dir.join("posts");
-    let pages_dir = content_dir.join("pages");
 
     let posts = if posts_dir.exists() {
         scan_posts(&posts_dir)
@@ -422,8 +423,8 @@ fn main() {
         Vec::new()
     };
 
-    let pages = if pages_dir.exists() {
-        scan_pages(&pages_dir)
+    let pages = if content_dir.exists() {
+        scan_pages(&content_dir)
     } else {
         Vec::new()
     };

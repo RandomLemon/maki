@@ -24,7 +24,7 @@ MAKI_CONTENT_DIR=/srv/maki-content cargo run
 - 变量未设置或值为空字符串时，回退到 `<项目根>/content`。
 - 相对路径不是相对当前 shell，而是相对 `CARGO_MANIFEST_DIR`。
 - 显式设置时，目录必须存在且是目录，否则构建失败；默认 `content/` 缺失时按空内容处理。
-- 目录内 `posts/`、`pages/` 可以只存在一个；不存在的子目录按空集合处理。
+- 目录内 `posts/` 可以不存在，此时文章集合为空；内容目录根部的 `.md` 文件是独立页面，子目录中的 Markdown 不参与页面扫描。
 - 支持把内容放在独立仓库，在 CI 中先检出再通过该变量指向。
 
 ### `MAKI_BASE_URL`

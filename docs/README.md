@@ -36,7 +36,7 @@ caddy file-server --listen :8080 --browse --root dist
 
 | 项目 | 说明 |
 | --- | --- |
-| 输入 | `content/posts/**/*.md` 与 `content/pages/**/*.md`，可由 `MAKI_CONTENT_DIR` 指向外部目录 |
+| 输入 | `content/posts/**/*.md` 与 `content/*.md`，可由 `MAKI_CONTENT_DIR` 指向外部目录 |
 | 输出 | `dist/` 下的静态 HTML、合并后的 `style.css`、`404.html`，以及 `public/` 中的静态资源 |
 | 技术栈 | Rust 2024 edition、Leptos 0.7.8(SSR)、leptos_router 0.7.8、pulldown-cmark、syntect、chrono |
 | 内容处理 | 编译期由 `build.rs` 完成，生成 `OUT_DIR/content.rs` 并嵌入二进制 |
@@ -61,8 +61,8 @@ caddy file-server --listen :8080 --browse --root dist
 │   ├── styles/               # 按固定顺序合并为 dist/style.css
 │   └── .nojekyll             # 复制到 dist/ 根目录
 ├── content/
-│   ├── posts/                # 示例文章
-│   └── pages/                # 示例独立页面
+│   ├── about.md              # 示例独立页面
+│   └── posts/                # 示例文章
 ├── flake.nix                 # Nix 开发环境(含 caddy)
 ├── rust-toolchain.toml       # stable 工具链
 └── .github/workflows/deploy.yml

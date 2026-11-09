@@ -18,14 +18,13 @@ MAKI_CONTENT_DIR=/path/to/maki-content cargo run
 
 ```text
 maki-content/
-├── posts/
-│   └── ...
-└── pages/
-    └── about.md
+├── about.md
+└── posts/
+    └── ...
 ```
 
 - `posts` 中包含博客文章。在 Markdown 文件中使用 YAML frontmatter 标记标题、发布日期、标签和概要。
-- `pages` 可以按需编写一些其它页面，比如“关于”页面。
+- 内容目录根部的 `.md` 文件是独立页面，比如 `about.md` 会生成 `/about`；除 `posts/` 外的子目录中的 Markdown 不会被扫描为页面。
 
 内容在编译期被读取并嵌入站点。`build.rs` 会监听内容目录，修改后重新运行 `cargo run` 即可。
 

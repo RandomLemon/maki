@@ -6,13 +6,12 @@
 
 ```text
 content/
-├── posts/
-│   ├── rust/
-│   │   └── memory-layout.md      → /posts/rust/memory-layout
-│   └── leptos/
-│       └── ssg-guide.md          → /posts/leptos/ssg-guide
-└── pages/
-    └── about.md                  → /about
+├── about.md                      → /about
+└── posts/
+    ├── rust/
+    │   └── memory-layout.md      → /posts/rust/memory-layout
+    └── leptos/
+        └── ssg-guide.md          → /posts/leptos/ssg-guide
 ```
 
 也可以通过 `MAKI_CONTENT_DIR` 指向任意目录或独立内容仓库：
@@ -65,7 +64,7 @@ summary: 介绍 Rust 中常见数据结构的内存布局，帮助理解所有�
 
 ## 独立页面
 
-页面放在 `pages/` 下，通常用于“关于”等单页。
+独立页面直接放在内容目录根部（与 `posts/` 同级），通常用于“关于”等单页。只有根部的 `.md` 文件会被扫描为页面，子目录中的 Markdown 不参与页面扫描。
 
 ### 带 frontmatter
 
@@ -81,7 +80,7 @@ title: 关于
 | --- | --- | --- | --- |
 | `title` | 字符串 | 是 | 页面标题 |
 
-页面 slug 是文件相对 `pages/` 的路径去掉 `.md`，URL 为 `/{slug}`。
+页面 slug 是文件名去掉 `.md`，URL 为 `/{slug}`，例如 `content/about.md` → `/about`。
 
 ### 不带 frontmatter
 
@@ -97,16 +96,16 @@ title: 关于
 2. 没有这样的行时，标题回退为 `"关于"`；
 3. 整个文件（包括第一行）都作为 Markdown 正文渲染。
 
-### 页面必须保持单层
+### 页面只扫描根目录
 
-`pages/` 的扫描是递归的，但站点只有 `/:slug` 这一条页面路由，它**只匹配单段路径**。因此：
+`scan_pages()` 只扫描内容目录根部一层的 `.md` 文件，不会递归子目录；站点也只有 `/:slug` 这一条页面路由，它**只匹配单段路径**。因此：
 
 ```text
-pages/about.md          → /about          ✅ 正常
-pages/nested/page.md    → /nested/page    ❌ 会渲染成 404 内容
+content/about.md           → /about            ✅ 正常
+content/notes/page.md      → 不生成页面        ❌ 子目录被忽略
 ```
 
-嵌套页面虽然会被生成目录和 HTML 文件，但路由匹配不到 `StaticPageView`，实际输出的是 `NotFound`。请把页面直接放在 `pages/` 根目录。
+请把独立页面直接放在内容目录根部（与 `posts/` 同级）。
 
 ## Markdown 规则
 
@@ -174,6 +173,6 @@ cargo run
 - [ ] 文章 frontmatter 有 `title`，日期使用 `YYYY-MM-DD`。
 - [ ] 显式提供 `summary`，尤其是中文内容。
 - [ ] 标签使用简短、稳定、区分大小写的标识，避免 `/`、`?`、`#` 和空格。
-- [ ] 页面直接放在 `pages/` 根目录，不嵌套子目录。
+- [ ] 独立页面直接放在内容目录根部（与 `posts/` 同级），不要放进子目录。
 - [ ] 正文如需站内绝对链接，确认子路径部署下的 `base` 前缀。
 - [ ] 运行 `cargo run` 后检查 `dist/` 中对应路径的 HTML。

@@ -55,7 +55,7 @@ cargo run         # 生成站点到 dist/
 3. **站内绝对链接必须带 base。** 组件中用 `Link` 或 `full_href("/path")`；不要硬编码 `href="/path"`。Markdown 正文中的链接不会被自动改写。
 4. **路由必须可静态枚举。** 新路由使用 `SsrMode::Static(...)`；带参数的路由必须提供 `prerender_params` 枚举全部取值，否则不会产出页面。
 5. **新增样式必须登记。** 在 `public/styles/` 新建 CSS 后，把文件名加入 `src/main.rs` 的 `merge_styles()` 顺序数组，否则不会进入 `style.css`。
-6. **页面保持单层。** `pages/` 虽递归扫描，但 `/:slug` 只匹配单段路径；嵌套页面会渲染为 404。不要依赖嵌套页面。
+6. **页面来自内容目录根部。** 独立页面是内容目录根部的 `.md` 文件（如 `content/about.md` → `/about`）；扫描不递归子目录，且 `/:slug` 只匹配单段路径。
 7. **非 ASCII 内容显式写 `summary`（尤其中文）。** 未写摘要时按 200 **字节**截断，可能切在多字节字符中间并导致构建 panic。
 8. **HTML 视为可信内容。** `MarkdownHtml` 用 `inner_html` 注入预生成 HTML，Markdown 原始 HTML 也会直出；不要接入未经审核的第三方内容。
 9. **`dist/` 是临时目录。** 每次生成会删除整个 `dist/`，不要把需要持久化的文件放进去。
@@ -141,7 +141,7 @@ caddy file-server --listen :8080 --browse --root dist
 - 无 RSS、sitemap、搜索。
 - 所有页面 `<title>` 固定为 `Maki`。
 - 无客户端 hydration；交互仅限内联主题脚本。
-- 嵌套页面会渲染为 404。
+- 独立页面只扫描内容目录根部的 Markdown；子目录中的 Markdown 不会生成页面。
 - 自动摘要按字节截断，可能 panic。
 - 正文若以 `# 标题` 开头，会与模板 `<h1>` 重复。
 - Markdown 正文中的站内绝对链接不会自动加 base。

@@ -7,7 +7,7 @@ Maki 没有使用 `cargo-leptos`，而是把 Leptos 当作模板/组件库：`bu
 ```mermaid
 flowchart LR
     A["content/posts/**/*.md"] --> B[build.rs]
-    C["content/pages/**/*.md"] --> B
+    C["content/*.md"] --> B
     B --> D["OUT_DIR/content.rs<br/>ALL_POSTS / ALL_PAGES / CONTENT_TREE"]
     D --> E[cargo 编译 maki]
     E --> F["main.rs<br/>RouteList::generate + into_static_paths"]
@@ -40,7 +40,7 @@ flowchart LR
 | 绝对路径 | 直接使用 |
 | 显式设置但不是目录 | 构建失败：`MAKI_CONTENT_DIR is not a directory` |
 
-无论使用哪个目录，都期望其中存在 `posts/` 和/或 `pages/`；目录缺失时按空集合处理。
+无论使用哪个目录，都期望其中存在 `posts/` 与根部的 `.md` 独立页面；`posts/` 缺失时按空文章集处理，内容目录本身缺失时页面和文章都为空。
 
 ### 2. 扫描文章
 
@@ -56,9 +56,9 @@ flowchart LR
 
 ### 3. 扫描独立页面
 
-`scan_pages()` 递归遍历 `pages/` 下的所有 `.md` 文件：
+`scan_pages()` 只扫描内容目录根部一层的 `.md` 文件（`WalkDir` 的 `max_depth(1)`），不递归子目录；同时开启 `follow_links`，因此 `content/about.md` 可以是指向 `README.md` 的符号链接。
 
-- `slug` = 相对 `pages/` 的路径去掉扩展名，分隔符统一为 `/`。
+- slug 是文件名去掉 `.md`，例如 `content/about.md` → `about`，URL 为 `/about`。
 - 如果 frontmatter 能成功解析，使用其中的 `title`，正文使用 frontmatter 之后的内容。
 - 如果 frontmatter 解析失败，取正文第一行 `# ` 后面的文本作为标题，并把**整个文件**作为 Markdown 正文；仍取不到标题时使用 `"关于"`。
 - 页面没有日期、标签和摘要字段。

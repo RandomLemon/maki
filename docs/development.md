@@ -268,7 +268,7 @@ caddy file-server --listen :8080 --browse --root dist
 | 无 RSS / sitemap / 搜索 | 当前生成器未实现 |
 | 页面标题固定 | 所有页面 `<title>` 都是 `Maki`，没有按文章/页面生成标题和 meta |
 | 无客户端 hydration | 页面是纯静态 HTML，交互仅限内联主题脚本 |
-| 页面不能嵌套 | `/:slug` 只匹配单段路径；`pages/` 子目录会生成文件但渲染为 404 |
+| 只有根层 Markdown 是页面 | `scan_pages()` 不递归，内容目录子目录中的 Markdown 会被忽略、不生成页面；`/:slug` 也只匹配单段路径 |
 | 中文自动摘要可能失败 | 未写 `summary` 时按 200 字节截断，可能 panic |
 | 正文标题可能重复 | 模板和 Markdown 都可能输出 `<h1>` |
 | Markdown 链接不处理 base | 子路径部署时站内绝对链接需自行处理 |
