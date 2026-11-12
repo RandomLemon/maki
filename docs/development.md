@@ -220,6 +220,7 @@ cargo run
 
 ```bash
 test -f dist/index.html
+test -f dist/latest/index.html
 test -f dist/404.html
 test -f dist/style.css
 test -f dist/posts/rust/memory-layout/index.html
@@ -279,13 +280,13 @@ cargo run
 caddy file-server --listen :8080 --browse --root dist
 ```
 
-重点检查导航、文章页、标签页、归档树、深色模式首屏不闪烁、404 页面样式。
+重点检查首页、最新文章页（`/latest`）、导航、文章页、标签页、归档树、深色模式首屏不闪烁、404 页面样式。
 
 ## 已知限制
 
 | 限制 | 说明 |
 | --- | --- |
-| 无分页 | `Home` 直接遍历 `ALL_POSTS`，文章多时首页会很长 |
+| 无分页 | `Latest` 直接遍历 `ALL_POSTS`，最新文章页会很长；首页由 `content/index.md` 渲染 |
 | 无 RSS / sitemap / 搜索 | 当前生成器未实现 |
 | 页面标题固定 | 所有页面 `<title>` 都是 `Maki`，没有按文章/页面生成标题和 meta |
 | 无客户端 hydration | 页面是纯静态 HTML，交互仅限内联主题脚本 |

@@ -1,5 +1,6 @@
 pub mod archive;
 pub mod home;
+pub mod latest;
 pub mod not_found;
 pub mod post;
 pub mod static_page;
@@ -8,6 +9,7 @@ pub mod tags;
 
 pub use archive::Archive;
 pub use home::Home;
+pub use latest::Latest;
 pub use not_found::NotFound;
 pub use post::PostDetail;
 pub use static_page::StaticPageView;

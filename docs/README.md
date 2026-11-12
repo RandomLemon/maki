@@ -56,11 +56,12 @@ caddy file-server --listen :8080 --browse --root dist
 │   ├── content.rs            # include!(OUT_DIR/content.rs)
 │   ├── models/               # Post / StaticPage / ContentNode
 │   ├── components/           # Navbar、Footer、Link、MarkdownHtml、ContentTree
-│   └── pages/                # Home、Archive、Tags、TagPosts、PostDetail、StaticPageView、NotFound
+│   └── pages/                # Home、Latest、Archive、Tags、TagPosts、PostDetail、StaticPageView、NotFound
 ├── public/
 │   ├── styles/               # 按固定顺序合并为 dist/style.css
 │   └── .nojekyll             # 复制到 dist/ 根目录
 ├── content/
+│   ├── index.md              # 首页内容（渲染到 /）
 │   ├── about.md              # 示例独立页面
 │   └── posts/                # 示例文章
 ├── flake.nix                 # Nix 开发环境(含 caddy)

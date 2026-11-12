@@ -1,6 +1,6 @@
 use crate::base::base_prefix;
 use crate::components::{Footer, Navbar};
-use crate::pages::{Archive, Home, NotFound, PostDetail, StaticPageView, TagPosts, Tags};
+use crate::pages::{Archive, Home, Latest, NotFound, PostDetail, StaticPageView, TagPosts, Tags};
 use leptos::prelude::*;
 use leptos_router::{
     SsrMode,
@@ -36,6 +36,11 @@ pub fn App() -> impl IntoView {
                             <Route
                                 path=path!("/")
                                 view=Home
+                                ssr=SsrMode::Static(StaticRoute::new())
+                            />
+                            <Route
+                                path=path!("/latest")
+                                view=Latest
                                 ssr=SsrMode::Static(StaticRoute::new())
                             />
                             <Route
@@ -88,6 +93,7 @@ pub fn App() -> impl IntoView {
                                         let mut map = StaticParamsMap::new();
                                         let slugs: Vec<String> = crate::content::ALL_PAGES
                                             .iter()
+                                            .filter(|p| p.slug != "index")
                                             .map(|p| p.slug.to_string())
                                             .collect();
                                         map.insert("slug".to_string(), slugs);

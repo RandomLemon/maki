@@ -65,6 +65,8 @@ flowchart LR
 - 如果 frontmatter 能成功解析，使用其中的 `title`，正文使用 frontmatter 之后的内容。
 - 如果 frontmatter 解析失败，取正文第一行 `# ` 后面的文本作为标题，并把**整个文件**作为 Markdown 正文；仍取不到标题时使用 `"关于"`。
 - 页面没有日期、标签和摘要字段。
+- 根部 `index.md` 的 slug 是 `index`，专用于首页：`/` 的 `Home` 组件从 `ALL_PAGES` 中查找 slug 为 `index` 的页面并渲染其标题和正文。`/:slug` 的 `prerender_params` 过滤掉 `index`，因此不会生成 `/index` 页面。
+- 缺少 `index.md` 时构建不失败，首页显示“首页内容缺失”提示。
 
 ### 4. Markdown 渲染
 
@@ -101,7 +103,7 @@ flowchart LR
 | `BASE_URL` | `&str` | 规范化后的 `MAKI_BASE_URL`，构建期常量 |
 | `CONTENT_DIR` | `&str` | 解析为绝对路径的内容目录，生成期用于复制非 Markdown 资源 |
 | `ALL_POSTS` | `&[Post]` | 全部文章，按日期降序 |
-| `ALL_PAGES` | `&[StaticPage]` | 全部独立页面 |
+| `ALL_PAGES` | `&[StaticPage]` | 全部独立页面（含 `index`，仅供首页使用） |
 | `CONTENT_TREE` | `&ContentNode` | 归档目录树 |
 
 字符串会经过 Rust 字面量转义；HTML 直接作为字符串嵌入。`src/content.rs` 通过 `include!(concat!(env!("OUT_DIR"), "/content.rs"));` 引入这些常量。
@@ -205,6 +207,7 @@ path 去掉 base 前缀 → 去掉首尾 / → 空则 index.html，否则 <relat
 | 路由 | 输出文件 |
 | --- | --- |
 | `/` | `dist/index.html` |
+| `/latest` | `dist/latest/index.html` |
 | `/archive` | `dist/archive/index.html` |
 | `/tags` | `dist/tags/index.html` |
 | `/tag/rust` | `dist/tag/rust/index.html` |
@@ -255,12 +258,13 @@ not-found.css
 
 | 路径 | 组件 | 预渲染参数 | 说明 |
 | --- | --- | --- | --- |
-| `/` | `Home` | 无 | 首页，列出全部文章 |
+| `/` | `Home` | 无 | 首页，渲染 `content/index.md` |
+| `/latest` | `Latest` | 无 | 最新文章，列出全部文章 |
 | `/archive` | `Archive` | 无 | 归档目录树 |
 | `/tags` | `Tags` | 无 | 标签云 |
 | `/tag/:tag` | `TagPosts` | 全部文章标签 | 按标签筛选文章 |
 | `/posts/*slug` | `PostDetail` | 全部文章 slug | 文章详情，slug 可包含 `/` |
-| `/:slug` | `StaticPageView` | 全部页面 slug | 独立页面，仅匹配单段路径 |
+| `/:slug` | `StaticPageView` | 全部页面 slug（排除 `index`） | 独立页面，仅匹配单段路径 |
 | `/*` | `NotFound` | 无 | 兜底；同时手动生成 `404.html` |
 
 路由优先级由 `leptos_router` 处理；`/archive`、`/tags` 等具体路径不会被 `/:slug` 捕获。新增顶层页面时仍建议显式声明路由，否则请求可能落入 `/:slug` 并显示“页面不存在”。
@@ -280,7 +284,7 @@ not-found.css
 
 | 组件 | 职责 |
 | --- | --- |
-| `Navbar` | 品牌链接、首页/文章目录/标签/关于导航、主题切换按钮与切换脚本 |
+| `Navbar` | 品牌链接、首页/最新文章/文章目录/标签/关于导航、主题切换按钮与切换脚本 |
 | `Footer` | 页脚，外链到 Maki 仓库 |
 | `Link` | 站内链接组件；对以 `/` 开头的 href 调用 `full_href` 加 base 前缀 |
 | `MarkdownHtml` | 用 `inner_html` 渲染预生成的 Markdown HTML |
@@ -290,7 +294,8 @@ not-found.css
 
 | 页面 | 行为 |
 | --- | --- |
-| `Home` | 遍历 `ALL_POSTS`，渲染标题、日期、标签链接和摘要 |
+| `Home` | 在 `ALL_PAGES` 中查找 slug 为 `index` 的页面，渲染 `<h1>{title}</h1>` 和正文；找不到时显示首页内容缺失提示 |
+| `Latest` | 遍历 `ALL_POSTS`，渲染标题、日期、标签链接和摘要 |
 | `Archive` | 使用 `CONTENT_TREE` 渲染目录树 |
 | `Tags` | 从 `ALL_POSTS` 收集标签，`BTreeSet` 去重并排序，渲染标签云 |
 | `TagPosts` | 读取 `tag` 路由参数，筛选 `post.tags` 中包含该标签的文章；标题为 `标签: <tag>` |

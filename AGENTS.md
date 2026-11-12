@@ -55,7 +55,7 @@ cargo run         # 生成站点到 dist/
 3. **站内绝对链接必须带 base。** 组件中用 `Link` 或 `full_href("/path")`；不要硬编码 `href="/path"`。Markdown 正文中以单个 `/` 开头的链接和图片由 `build.rs` 自动加 base；原始 HTML 中的链接不会改写。
 4. **路由必须可静态枚举。** 新路由使用 `SsrMode::Static(...)`；带参数的路由必须提供 `prerender_params` 枚举全部取值，否则不会产出页面。
 5. **新增样式必须登记。** 在 `public/styles/` 新建 CSS 后，把文件名加入 `src/main.rs` 的 `merge_styles()` 顺序数组，否则不会进入 `style.css`。
-6. **页面来自内容目录根部。** 独立页面是内容目录根部的 `.md` 文件（如 `content/about.md` → `/about`）；扫描不递归子目录，且 `/:slug` 只匹配单段路径。
+6. **页面来自内容目录根部。** 独立页面是内容目录根部的 `.md` 文件（如 `content/about.md` → `/about`）；扫描不递归子目录，且 `/:slug` 只匹配单段路径。`content/index.md` 专用于首页 `/`（由 `Home` 从 `ALL_PAGES` 查找 slug `index` 渲染），不会生成 `/index`；缺失时首页显示提示、构建不失败。
 7. **非 ASCII 内容显式写 `summary`（尤其中文）。** 未写摘要时按 200 **字节**截断，可能切在多字节字符中间并导致构建 panic。
 8. **HTML 视为可信内容。** `MarkdownHtml` 用 `inner_html` 注入预生成 HTML，Markdown 原始 HTML 也会直出；不要接入未经审核的第三方内容。
 9. **`dist/` 是临时目录。** 每次生成会删除整个 `dist/`，不要把需要持久化的文件放进去。
@@ -109,6 +109,7 @@ cargo run
 
 ```bash
 test -f dist/index.html
+test -f dist/latest/index.html
 test -f dist/404.html
 test -f dist/style.css
 test -f dist/posts/rust/memory-layout/index.html
@@ -140,7 +141,7 @@ caddy file-server --listen :8080 --browse --root dist
 
 以下行为是当前实现的已知状态，详见 `docs/development.md`。不要在没有任务要求时顺手改动其语义；若确实修复，同步更新文档和验证。
 
-- 首页无分页，直接列出全部文章。
+- 最新文章页（`/latest`）无分页，直接列出全部文章；首页由 `content/index.md` 渲染。
 - 无 RSS、sitemap、搜索。
 - 所有页面 `<title>` 固定为 `Maki`。
 - 无客户端 hydration；交互仅限内联主题脚本。

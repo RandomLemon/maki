@@ -1,34 +1,27 @@
-use crate::components::Link;
-use crate::content::ALL_POSTS;
+use crate::components::MarkdownHtml;
+use crate::content::ALL_PAGES;
 use leptos::prelude::*;
 
 #[component]
 pub fn Home() -> impl IntoView {
+    let page = || ALL_PAGES.iter().find(|p| p.slug == "index");
+
     view! {
-        <div class="page home">
-            <h1>"最新文章"</h1>
-            <div class="post-list">
-                <For
-                    each=|| ALL_POSTS
-                    key=|post| post.slug
-                    let:post
-                >
-                    <article class="post-card">
-                        <h2>
-                            <Link href=post.full_path.to_string()>{post.title}</Link>
-                        </h2>
-                        <div class="meta">
-                            <span>{post.date.to_string()}</span>
-                            <span class="tags">
-                                <For each=move || post.tags key=|tag| *tag let:tag>
-                                    <Link class="tag" href={format!("/tag/{}", tag)}>{*tag}</Link>
-                                </For>
-                            </span>
-                        </div>
-                        <p class="summary">{post.summary}</p>
+        <div class="page static-page">
+            {move || match page() {
+                Some(page) => view! {
+                    <article>
+                        <h1>{page.title}</h1>
+                        <MarkdownHtml html=page.content_html />
                     </article>
-                </For>
-            </div>
+                }.into_any(),
+                None => view! {
+                    <article>
+                        <h1>"首页"</h1>
+                        <p>"首页内容缺失：请在内容目录根部添加 index.md。"</p>
+                    </article>
+                }.into_any(),
+            }}
         </div>
     }
 }
