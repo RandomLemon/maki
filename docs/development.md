@@ -45,8 +45,8 @@ cargo run
 
 | 文件 | 职责 |
 | --- | --- |
-| `build.rs` | 扫描内容、解析 frontmatter、Markdown 转 HTML、代码高亮、生成 `OUT_DIR/content.rs` |
-| `src/main.rs` | 静态生成器入口：清理输出、枚举路由、渲染 HTML、合并 CSS、复制资源、写 404/重定向 |
+| `build.rs` | 扫描内容、解析 frontmatter、Markdown 转 HTML、链接/图片加 base、代码高亮、生成 `OUT_DIR/content.rs`（含 `CONTENT_DIR`） |
+| `src/main.rs` | 静态生成器入口：清理输出、复制内容资源、枚举路由、渲染 HTML、合并 CSS、复制资源、写 404/重定向 |
 | `src/app.rs` | 根组件、路由声明、主题初始化脚本 |
 | `src/base.rs` | `base_prefix()`、`full_href()` |
 | `src/content.rs` | `include!(OUT_DIR/content.rs)` |
@@ -187,7 +187,7 @@ let order = [
 因此：
 
 - 不要在内链中硬编码 `/foo`，使用 `Link` 或 `full_href("/foo")`。
-- Markdown 正文中的链接不会被改写；内容作者需要自行处理。
+- Markdown 正文中以单个 `/` 开头的链接和图片会在 `build.rs` 中自动加 base；相对路径、外部 URL 和原始 HTML 中的 URL 不会被改写。
 - 不要拼接 `base_prefix()` 后再手动加 `/` 造成双斜杠；`full_href` 已经处理。
 
 ### 路由可枚举
@@ -234,7 +234,28 @@ grep -c 'code-block' dist/posts/rust/memory-layout/index.html
 grep -o '<title>[^<]*</title>' dist/index.html
 ```
 
-4. 验证子路径部署：
+4. 验证内容资源与 Markdown base：
+
+```bash
+rm -rf /tmp/maki-check
+mkdir -p /tmp/maki-check/posts
+printf 'png' > /tmp/maki-check/posts/pic.png
+cat > /tmp/maki-check/posts/demo.md <<'EOF'
+---
+title: demo
+summary: demo
+---
+
+![x](/posts/pic.png)
+EOF
+MAKI_BASE_URL=/maki MAKI_CONTENT_DIR=/tmp/maki-check cargo run
+test -f dist/maki/posts/pic.png
+grep -o '<img[^>]*>' dist/maki/posts/demo/index.html   # src="/maki/posts/pic.png"
+```
+
+确认非 `.md` 资源按相对路径复制到输出根，Markdown 的站内绝对图片已加 base；隐藏项和 `.md` 文件不复制。
+
+5. 验证子路径部署：
 
 ```bash
 MAKI_BASE_URL=/maki cargo run
@@ -246,13 +267,13 @@ grep -o 'href="[^"]*"' dist/maki/index.html | head
 
 确认 `dist/index.html` 是跳转页，且站内链接带 `/maki` 前缀。
 
-5. 恢复默认构建：
+6. 恢复默认构建：
 
 ```bash
 cargo run
 ```
 
-6. 如需视觉检查，启动本地服务器并实际打开页面：
+7. 如需视觉检查，启动本地服务器并实际打开页面：
 
 ```bash
 caddy file-server --listen :8080 --browse --root dist
@@ -271,7 +292,8 @@ caddy file-server --listen :8080 --browse --root dist
 | 只有根层 Markdown 是页面 | `scan_pages()` 不递归，内容目录子目录中的 Markdown 会被忽略、不生成页面；`/:slug` 也只匹配单段路径 |
 | 中文自动摘要可能失败 | 未写 `summary` 时按 200 字节截断，可能 panic |
 | 正文标题可能重复 | 模板和 Markdown 都可能输出 `<h1>` |
-| Markdown 链接不处理 base | 子路径部署时站内绝对链接需自行处理 |
+| 裸 HTML 不处理 base | Markdown 语法中的站内绝对链接会自动加 base，但原始 HTML 中的 URL 原样输出 |
+| 隐藏资源不发布 | 内容目录中以 `.` 开头的文件和目录不会复制，需要发布的隐藏文件放 `public/` |
 | 标签原样进 URL | 标签未做百分号编码，建议使用简短 ASCII 标识 |
 | `dist/` 全量重建 | 每次生成都会删除整个 `dist/` |
 | 无测试套件 | 目前依赖构建和产物检查 |

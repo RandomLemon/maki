@@ -36,10 +36,10 @@ caddy file-server --listen :8080 --browse --root dist
 
 | 项目 | 说明 |
 | --- | --- |
-| 输入 | `content/posts/**/*.md` 与 `content/*.md`，可由 `MAKI_CONTENT_DIR` 指向外部目录 |
-| 输出 | `dist/` 下的静态 HTML、合并后的 `style.css`、`404.html`，以及 `public/` 中的静态资源 |
+| 输入 | `content/posts/**/*.md` 与 `content/*.md`，以及随站点发布的非 Markdown 资源；可由 `MAKI_CONTENT_DIR` 指向外部目录 |
+| 输出 | `dist/` 下的静态 HTML、合并后的 `style.css`、`404.html`，以及 `content/`、`public/` 中的静态资源 |
 | 技术栈 | Rust 2024 edition、Leptos 0.7.8(SSR)、leptos_router 0.7.8、pulldown-cmark、syntect、chrono |
-| 内容处理 | 编译期由 `build.rs` 完成，生成 `OUT_DIR/content.rs` 并嵌入二进制 |
+| 内容处理 | Markdown 在编译期由 `build.rs` 处理并生成 `OUT_DIR/content.rs`；非 Markdown 资源在生成期按相对路径复制 |
 | 运行模型 | 纯静态多页站点；无客户端路由，无 WASM hydration |
 | 主题 | `localStorage` + `prefers-color-scheme`，页面加载前同步应用，支持 View Transitions 切换动画 |
 | 部署 | GitHub Actions + Nix 构建，产物上传 GitHub Pages；也可部署到任意静态托管 |

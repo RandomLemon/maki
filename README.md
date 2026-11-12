@@ -25,8 +25,9 @@ maki-content/
 
 - `posts` 中包含博客文章。在 Markdown 文件中使用 YAML frontmatter 标记标题、发布日期、标签和概要。
 - 内容目录根部的 `.md` 文件是独立页面，比如 `about.md` 会生成 `/about`；除 `posts/` 外的子目录中的 Markdown 不会被扫描为页面。
+- 内容目录中的非 `.md` 文件（图片、PDF 等）会按相对路径复制到站点根；Markdown 中的站内绝对链接和图片会自动加 base 前缀。
 
-内容在编译期被读取并嵌入站点。`build.rs` 会监听内容目录，修改后重新运行 `cargo run` 即可。
+Markdown 内容在编译期被读取并嵌入站点，非 Markdown 资源在生成阶段复制到输出目录。`build.rs` 会监听内容目录，修改后重新运行 `cargo run` 即可。
 
 ### 2. 编译网站
 

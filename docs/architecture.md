@@ -8,7 +8,7 @@ Maki 没有使用 `cargo-leptos`，而是把 Leptos 当作模板/组件库：`bu
 flowchart LR
     A["content/posts/**/*.md"] --> B[build.rs]
     C["content/*.md"] --> B
-    B --> D["OUT_DIR/content.rs<br/>ALL_POSTS / ALL_PAGES / CONTENT_TREE"]
+    B --> D["OUT_DIR/content.rs<br/>BASE_URL / CONTENT_DIR<br/>ALL_POSTS / ALL_PAGES / CONTENT_TREE"]
     D --> E[cargo 编译 maki]
     E --> F["main.rs<br/>RouteList::generate + into_static_paths"]
     F --> G["render_path<br/>App().to_html()"]
@@ -16,16 +16,19 @@ flowchart LR
     I["public/styles/*.css"] --> J[merge_styles]
     J --> K["dist/style.css"]
     L["public/**"] --> M[copy_dir_all]
+    O["content/** 非 .md 资源"] --> P[copy_content_assets]
     H --> N[dist 站点产物]
     K --> N
     M --> N
+    P --> N
 ```
 
 关键点：
 
 - 内容是**编译期输入**，修改内容后需要重新运行 `cargo run`；生成阶段不做运行时文件读取。
+- 内容目录中的非 Markdown 资源在生成期由 `src/main.rs` 按相对路径复制到输出根；`CONTENT_DIR` 由 `build.rs` 编译期写入。
 - 页面是**预渲染的静态 HTML**，浏览器端没有 Leptos hydration，也没有客户端路由。
-- 所有站内绝对链接都必须带 `base` 前缀；这一层由 `src/base.rs` 和 `Link` 组件负责。
+- 站内绝对链接必须带 `base` 前缀：组件层由 `src/base.rs` 和 `Link` 负责，Markdown 的链接/图片由 `build.rs` 在编译期改写。
 
 ## 构建期：`build.rs`
 
@@ -71,9 +74,12 @@ flowchart LR
 2. 遇到 `CodeBlock` 时收集代码文本；遇到结束事件时：
    - 有语言标记：用 `syntect` 的默认语法集按 token 查找语法，未知语言回退到纯文本语法，输出带 class 的 `<span>`，使用 `ClassStyle::Spaced`。
    - 无语言标记（包括缩进代码块）：HTML 转义后输出 `<pre class="code-block"><code>…</code></pre>`。
-3. 其余事件交给 `pulldown_cmark::html::push_html` 生成 HTML。
+3. 遇到 `Link` / `Image` 开始事件时，对以单个 `/` 开头的 `dest_url` 调用 `prefix_base_url()` 加 base 前缀；已带当前 base 的路径不重复添加。
+4. 其余事件交给 `pulldown_cmark::html::push_html` 生成 HTML。
 
 生成的代码块统一包在 `<pre class="code-block"><code>…</code></pre>` 中；高亮配色由 `public/styles/syntax.css` 按 class 映射。
+
+`prefix_base_url()` 只处理 Markdown 语法生成的链接和图片目标：`//host/...`、外部 URL、`mailto:`、相对路径原样返回；原始 HTML（`Event::Html`）不解析、不改写。
 
 ### 5. 构建归档树
 
@@ -93,6 +99,7 @@ flowchart LR
 | 常量 | 类型 | 说明 |
 | --- | --- | --- |
 | `BASE_URL` | `&str` | 规范化后的 `MAKI_BASE_URL`，构建期常量 |
+| `CONTENT_DIR` | `&str` | 解析为绝对路径的内容目录，生成期用于复制非 Markdown 资源 |
 | `ALL_POSTS` | `&[Post]` | 全部文章，按日期降序 |
 | `ALL_PAGES` | `&[StaticPage]` | 全部独立页面 |
 | `CONTENT_TREE` | `&ContentNode` | 归档目录树 |
@@ -151,7 +158,18 @@ pub struct ContentNode {
 
 如果 `dist/` 已存在，会**整个删除**（不只是当前 `base` 子目录），然后重新创建输出根目录。
 
-### 2. 枚举静态路由
+### 2. 复制内容资源
+
+`copy_content_assets()` 递归遍历 `CONTENT_DIR`，把非 Markdown 资源按相对路径复制到输出根目录：
+
+- 跳过以 `.` 开头的文件和目录（例如外部内容仓库的 `.git/`）；
+- 跳过扩展名为 `md` 的文件，其余普通文件（含 `.markdown`）都复制；
+- 符号链接等特殊文件不复制；
+- 源目录不存在时直接返回，不报错。
+
+内容资源在 HTML、`style.css` 和 `public/` 之前落盘，同名文件会被后续产物覆盖。
+
+### 3. 枚举静态路由
 
 ```rust
 let routes = Owner::new().with(|| {
@@ -168,7 +186,7 @@ let raw_paths = futures::executor::block_on(routes.into_static_paths());
   - `/:slug`：全部独立页面的 slug。
 - 路径经 `clean_path()` 折叠重复 `/`，再用 `HashSet` 去重、排序。
 
-### 3. 逐路由渲染
+### 4. 逐路由渲染
 
 `render_path(path)`：
 
@@ -195,7 +213,7 @@ path 去掉 base 前缀 → 去掉首尾 / → 空则 index.html，否则 <relat
 
 如果某个生成路径不以 `base` 开头，`main.rs` 会 panic，提示 `route path ... not prefixed by base ...`。
 
-### 4. 合并样式
+### 5. 合并样式
 
 `merge_styles()` 按固定顺序拼接 `public/styles/` 下的文件，写入 `<out_root>/style.css`：
 
@@ -215,19 +233,19 @@ not-found.css
 
 文件不存在时跳过；不做压缩或后处理。顺序影响层叠结果，新增样式文件必须同时登记到这个列表。
 
-### 5. 复制公共资源
+### 6. 复制公共资源
 
-- `public/` 递归复制到输出根目录，保留目录结构。
+- `public/` 递归复制到输出根目录，保留目录结构；同名文件会覆盖先前复制的内容资源。
 - 名为 `styles` 的目录（任意层级）被排除，因为样式已经合并成 `style.css`。
 - 根级文件 `.nojekyll`、`CNAME` 不参与普通复制，而是由 `copy_root_level_files()` 复制到 **`dist/` 根目录**。
 
-### 6. 子路径重定向
+### 7. 子路径重定向
 
 当 `base` 非空时，`write_redirect_index()` 生成 `dist/index.html`，通过 canonical、meta refresh 和 `location.replace` 把访问 `/` 的请求引导到 `{base}/`。
 
 注意：该文件位于 `dist/` 根，不在 `dist/<base>/` 内。它只在整体部署 `dist/` 时生效；如果部署工具只上传 `dist/<base>/`，这个跳转页不会被包含。
 
-### 7. 生成 404
+### 8. 生成 404
 
 `write_not_found()` 用一个必定不匹配具体页面的 URL（`{base}/__nonexistent__`）走一遍 `render_path`，触发 `Routes` 的 `NotFound` fallback，然后写入 `<out_root>/404.html`。这样 404 页面也带有完整导航和样式。
 
@@ -307,8 +325,8 @@ not-found.css
 
 ## 设计约束
 
-- **编译期内容**：所有内容和生成结果都在 `build.rs` 中完成，运行时没有文件系统访问。
+- **编译期内容**：Markdown 解析、frontmatter 处理和 HTML 片段生成在 `build.rs` 中完成；资源复制与页面输出在生成期由 `src/main.rs` 完成。
 - **静态多页**：链接是普通 `<a>`，整页导航；没有 SPA 路由。
-- **base 前缀**：站内绝对链接必须经过 `full_href` 或 `Link`；Markdown 正文中的绝对链接不会被自动改写。
+- **base 前缀**：组件的站内绝对链接必须经过 `full_href` 或 `Link`；Markdown 正文中的绝对链接和图片由 `build.rs` 自动加前缀，原始 HTML 不处理。
 - **路由可枚举**：新增页面必须使用 `SsrMode::Static`，并提供 `prerender_params`（如果路径含参数），否则不会被 `RouteList::generate` 输出。
 - **`dist/` 全量重建**：每次运行都会删除 `dist/`，不要把它当作持久化目录。

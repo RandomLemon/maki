@@ -35,8 +35,8 @@ cargo run         # 生成站点到 dist/
 
 | 文件/目录 | 职责 |
 | --- | --- |
-| `build.rs` | 内容扫描、frontmatter 解析、Markdown/代码高亮、生成 `content.rs` |
-| `src/main.rs` | 清理 `dist/`、枚举路由、写 HTML、合并 CSS、复制资源、404/重定向 |
+| `build.rs` | 内容扫描、frontmatter 解析、Markdown/代码高亮、Markdown 链接/图片加 base、生成 `content.rs`（含 `CONTENT_DIR`） |
+| `src/main.rs` | 清理 `dist/`、复制内容资源、枚举路由、写 HTML、合并 CSS、复制资源、404/重定向 |
 | `src/app.rs` | 根组件、路由表、主题初始化脚本 |
 | `src/base.rs` | `base_prefix()` 与 `full_href()` |
 | `src/content.rs` | `include!(concat!(env!("OUT_DIR"), "/content.rs"))` |
@@ -52,13 +52,14 @@ cargo run         # 生成站点到 dist/
 
 1. **内容在编译期嵌入。** 修改 `content/` 后必须重新 `cargo run`；页面组件中不要读取文件或访问网络。
 2. **不要手改生成物。** `dist/` 每次生成都会整个删除；`OUT_DIR/content.rs` 由 `build.rs` 生成。改源头，不要改结果。
-3. **站内绝对链接必须带 base。** 组件中用 `Link` 或 `full_href("/path")`；不要硬编码 `href="/path"`。Markdown 正文中的链接不会被自动改写。
+3. **站内绝对链接必须带 base。** 组件中用 `Link` 或 `full_href("/path")`；不要硬编码 `href="/path"`。Markdown 正文中以单个 `/` 开头的链接和图片由 `build.rs` 自动加 base；原始 HTML 中的链接不会改写。
 4. **路由必须可静态枚举。** 新路由使用 `SsrMode::Static(...)`；带参数的路由必须提供 `prerender_params` 枚举全部取值，否则不会产出页面。
 5. **新增样式必须登记。** 在 `public/styles/` 新建 CSS 后，把文件名加入 `src/main.rs` 的 `merge_styles()` 顺序数组，否则不会进入 `style.css`。
 6. **页面来自内容目录根部。** 独立页面是内容目录根部的 `.md` 文件（如 `content/about.md` → `/about`）；扫描不递归子目录，且 `/:slug` 只匹配单段路径。
 7. **非 ASCII 内容显式写 `summary`（尤其中文）。** 未写摘要时按 200 **字节**截断，可能切在多字节字符中间并导致构建 panic。
 8. **HTML 视为可信内容。** `MarkdownHtml` 用 `inner_html` 注入预生成 HTML，Markdown 原始 HTML 也会直出；不要接入未经审核的第三方内容。
 9. **`dist/` 是临时目录。** 每次生成会删除整个 `dist/`，不要把需要持久化的文件放进去。
+10. **内容资源随站点发布。** 内容目录中的非 `.md` 文件按相对路径复制到站点根；以 `.` 开头的项和符号链接不复制，`.md` 文件本身也不复制。需要发布的隐藏文件放 `public/`。
 
 ## 常见改动
 
@@ -125,6 +126,8 @@ grep -o 'href="[^"]*"' dist/maki/index.html | head
 cargo run   # 恢复默认根路径构建
 ```
 
+涉及内容资源或 Markdown 链接时，再用一个临时内容目录验证：非 `.md` 资源按相对路径出现在 `dist/`，隐藏项和 `.md` 文件不被复制，Markdown 的站内绝对链接在子路径模式下带 base。完整命令见 `docs/development.md`。
+
 需要视觉检查时启动实际服务器并打开页面：
 
 ```bash
@@ -144,7 +147,8 @@ caddy file-server --listen :8080 --browse --root dist
 - 独立页面只扫描内容目录根部的 Markdown；子目录中的 Markdown 不会生成页面。
 - 自动摘要按字节截断，可能 panic。
 - 正文若以 `# 标题` 开头，会与模板 `<h1>` 重复。
-- Markdown 正文中的站内绝对链接不会自动加 base。
+- 裸 HTML 中的站内绝对链接不会自动加 base；Markdown 语法中的链接和图片会自动加。
+- 内容目录中以 `.` 开头的文件和目录不会发布，符号链接也不会复制。
 - 标签原样拼入 `/tag/<tag>`，未做百分号编码。
 - 默认 GitHub Pages workflow 只上传 `dist/maki/`，因此 `dist/index.html` 跳转页、`dist/.nojekyll`、`dist/CNAME` 不会进入 artifact。
 

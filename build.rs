@@ -84,7 +84,30 @@ fn plain_text_summary(html: &str) -> String {
     text
 }
 
-fn markdown_to_html(input: &str) -> String {
+/// 给 Markdown 中的站内绝对 URL 加上 base 前缀。
+///
+/// - 只处理以单个 `/` 开头的目标;`//host/...`、`https://...`、`mailto:`、相对路径原样返回。
+/// - 根部署(`base_url == "/"`)时 base 为空,原样返回。
+/// - 已经带当前 base 的路径不重复加前缀:`/maki`、`/maki/...`、`/maki?x`、`/maki#x` 原样返回。
+fn prefix_base_url(dest: &str, base_url: &str) -> String {
+    if !dest.starts_with('/') || dest.starts_with("//") {
+        return dest.to_string();
+    }
+    let base = base_url.trim_end_matches('/');
+    if base.is_empty() {
+        return dest.to_string();
+    }
+    let already_prefixed = dest.strip_prefix(base).is_some_and(|rest| {
+        rest.is_empty() || rest.starts_with('/') || rest.starts_with('?') || rest.starts_with('#')
+    });
+    if already_prefixed {
+        dest.to_string()
+    } else {
+        format!("{base}{dest}")
+    }
+}
+
+fn markdown_to_html(input: &str, base_url: &str) -> String {
     let ss = SyntaxSet::load_defaults_newlines();
 
     let parser = Parser::new_ext(input, Options::ENABLE_TABLES);
@@ -135,6 +158,32 @@ fn markdown_to_html(input: &str) -> String {
                 events.push(Event::End(TagEnd::Table));
                 events.push(Event::Html("</div>".into()));
             }
+            Event::Start(Tag::Link {
+                link_type,
+                dest_url,
+                title,
+                id,
+            }) => {
+                events.push(Event::Start(Tag::Link {
+                    link_type,
+                    dest_url: prefix_base_url(&dest_url, base_url).into(),
+                    title,
+                    id,
+                }));
+            }
+            Event::Start(Tag::Image {
+                link_type,
+                dest_url,
+                title,
+                id,
+            }) => {
+                events.push(Event::Start(Tag::Image {
+                    link_type,
+                    dest_url: prefix_base_url(&dest_url, base_url).into(),
+                    title,
+                    id,
+                }));
+            }
             other => events.push(other),
         }
     }
@@ -156,7 +205,7 @@ fn html_escape(s: &str) -> String {
         .collect()
 }
 
-fn scan_posts(dir: &Path) -> Vec<Post> {
+fn scan_posts(dir: &Path, base_url: &str) -> Vec<Post> {
     let mut posts = Vec::new();
     for entry in WalkDir::new(dir)
         .into_iter()
@@ -173,7 +222,7 @@ fn scan_posts(dir: &Path) -> Vec<Post> {
         let doc: yaml_front_matter::Document<PostMeta> =
             YamlFrontMatter::parse::<PostMeta>(&raw).expect("failed to parse frontmatter");
 
-        let content_html = markdown_to_html(&doc.content);
+        let content_html = markdown_to_html(&doc.content, base_url);
         let summary = doc
             .metadata
             .summary
@@ -208,7 +257,7 @@ fn scan_posts(dir: &Path) -> Vec<Post> {
     posts
 }
 
-fn scan_pages(dir: &Path) -> Vec<StaticPage> {
+fn scan_pages(dir: &Path, base_url: &str) -> Vec<StaticPage> {
     let mut pages = Vec::new();
     // 独立页面只来自内容目录根部的 .md 文件；posts/ 等子目录不参与页面扫描。
     for entry in WalkDir::new(dir)
@@ -240,7 +289,7 @@ fn scan_pages(dir: &Path) -> Vec<StaticPage> {
         pages.push(StaticPage {
             slug,
             title,
-            content_html: markdown_to_html(&content),
+            content_html: markdown_to_html(&content, base_url),
         });
     }
     pages
@@ -319,6 +368,7 @@ fn generate_content_rs(
     pages: &[StaticPage],
     tree: &ContentNode,
     base_url: &str,
+    content_dir: &Path,
     out: &Path,
 ) {
     let mut buf = String::new();
@@ -327,6 +377,11 @@ fn generate_content_rs(
     buf.push_str(&format!(
         "pub const BASE_URL: &str = \"{}\";\n\n",
         escape_rust_string(base_url)
+    ));
+
+    buf.push_str(&format!(
+        "pub const CONTENT_DIR: &str = \"{}\";\n\n",
+        escape_rust_string(&content_dir.to_string_lossy())
     ));
 
     buf.push_str("pub static ALL_POSTS: &[Post] = &[\n");
@@ -415,22 +470,6 @@ fn main() {
     println!("cargo::rerun-if-env-changed=MAKI_BASE_URL");
     println!("cargo::rerun-if-changed={}", content_dir.display());
 
-    let posts_dir = content_dir.join("posts");
-
-    let posts = if posts_dir.exists() {
-        scan_posts(&posts_dir)
-    } else {
-        Vec::new()
-    };
-
-    let pages = if content_dir.exists() {
-        scan_pages(&content_dir)
-    } else {
-        Vec::new()
-    };
-
-    let tree = build_content_tree(&posts);
-
     let base_url = std::env::var("MAKI_BASE_URL").unwrap_or_else(|_| "/".to_string());
     let base_url = base_url.trim_end_matches('/').to_string();
     let base_url = if base_url.is_empty() {
@@ -444,7 +483,23 @@ fn main() {
         base_url
     };
 
+    let posts_dir = content_dir.join("posts");
+
+    let posts = if posts_dir.exists() {
+        scan_posts(&posts_dir, &base_url)
+    } else {
+        Vec::new()
+    };
+
+    let pages = if content_dir.exists() {
+        scan_pages(&content_dir, &base_url)
+    } else {
+        Vec::new()
+    };
+
+    let tree = build_content_tree(&posts);
+
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let out = PathBuf::from(out_dir).join("content.rs");
-    generate_content_rs(&posts, &pages, &tree, &base_url, &out);
+    generate_content_rs(&posts, &pages, &tree, &base_url, &content_dir, &out);
 }

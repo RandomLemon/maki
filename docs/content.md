@@ -107,6 +107,30 @@ content/notes/page.md      → 不生成页面        ❌ 子目录被忽略
 
 请把独立页面直接放在内容目录根部（与 `posts/` 同级）。
 
+## 资源文件
+
+内容目录中的非 Markdown 文件（图片、PDF、字体等）会随站点一起发布：生成器按相对内容目录的路径把它们复制到站点根，子路径部署时复制到 `{base}/` 下。
+
+```text
+content/images/a.png        → /images/a.png
+content/posts/rust/a.png    → /posts/rust/a.png
+content/files/doc.pdf       → /files/doc.pdf
+```
+
+规则：
+
+- 扩展名恰好为 `md` 的文件不复制（它们已经被当作内容处理）；`.markdown` 等其他扩展名按普通资源复制。
+- 以 `.` 开头的文件和目录不复制，例如外部内容仓库的 `.git/`。需要发布的隐藏文件（如 `.well-known/...`）放到 `public/`。
+- 只复制普通文件，符号链接等特殊文件跳过。
+- 内容资源先写入输出根，随后生成的 HTML、`style.css` 和 `public/` 会覆盖同名文件。
+- 默认内容目录缺失时静默跳过资源复制；显式设置 `MAKI_CONTENT_DIR` 指向不存在的目录仍会在构建期失败。
+
+在 Markdown 中引用资源时：
+
+- 以单个 `/` 开头的站内绝对路径会自动加 base 前缀：`![x](/images/a.png)` 在 `MAKI_BASE_URL=/maki` 下输出 `/maki/images/a.png`。已经带当前 base 的路径不会重复加前缀。
+- 相对路径按**页面 URL**解析，而不是按 Markdown 文件所在目录解析。文章页 URL 是 `/posts/{slug}`，例如 `posts/rust/memory-layout.md` 中的 `./a.png` 会请求 `/posts/rust/a.png`。推荐使用站内绝对路径。
+- 外部 URL、`//host/...`、`mailto:` 和原始 HTML 中的链接不会被改写。
+
 ## Markdown 规则
 
 Maki 使用 `pulldown-cmark`，在 CommonMark 基础上仅启用 GFM 表格扩展：
@@ -115,7 +139,7 @@ Maki 使用 `pulldown-cmark`，在 CommonMark 基础上仅启用 GFM 表格扩�
 - **支持 GFM 表格**：表头分隔行（`| --- | --- |`）和对齐标记（`:---`、`---:`、`:---:`）均可使用；宽表格在正文区域内横向滚动。
 - **其余 GFM 扩展未启用**：任务列表、删除线、脚注等不会按扩展语法渲染。
 - 原始 HTML 会原样进入生成的 HTML。
-- 正文中的链接和图片按原样输出，不会自动加 `base` 前缀。子路径部署时，站内绝对链接需要在 Markdown 中自行处理，或改用相对链接。
+- 正文中**以单个 `/` 开头的站内绝对链接和图片**会自动加 `base` 前缀；外部 URL、相对路径和原始 HTML 中的 URL 原样输出。
 
 ### 代码块
 
@@ -174,5 +198,5 @@ cargo run
 - [ ] 显式提供 `summary`，尤其是中文内容。
 - [ ] 标签使用简短、稳定、区分大小写的标识，避免 `/`、`?`、`#` 和空格。
 - [ ] 独立页面直接放在内容目录根部（与 `posts/` 同级），不要放进子目录。
-- [ ] 正文如需站内绝对链接，确认子路径部署下的 `base` 前缀。
-- [ ] 运行 `cargo run` 后检查 `dist/` 中对应路径的 HTML。
+- [ ] 图片、附件等资源放在内容目录内，并用 `/...` 形式的站内绝对路径引用。
+- [ ] 运行 `cargo run` 后检查 `dist/` 中对应路径的 HTML 和资源文件。

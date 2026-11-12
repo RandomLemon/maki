@@ -25,6 +25,7 @@ MAKI_CONTENT_DIR=/srv/maki-content cargo run
 - 相对路径不是相对当前 shell，而是相对 `CARGO_MANIFEST_DIR`。
 - 显式设置时，目录必须存在且是目录，否则构建失败；默认 `content/` 缺失时按空内容处理。
 - 目录内 `posts/` 可以不存在，此时文章集合为空；内容目录根部的 `.md` 文件是独立页面，子目录中的 Markdown 不参与页面扫描。
+- 目录中的非 `.md` 文件（图片、PDF 等）会按相对路径复制到输出根；以 `.` 开头的项和符号链接不复制，`.md` 文件本身也不复制。
 - 支持把内容放在独立仓库，在 CI 中先检出再通过该变量指向。
 
 ### `MAKI_BASE_URL`
@@ -57,7 +58,7 @@ MAKI_CONTENT_DIR=/srv/maki-content cargo run
 full_href("/archive") // base 为 /maki 时得到 /maki/archive
 ```
 
-Markdown 正文中的链接不会经过这一层处理。
+Markdown 正文中以单个 `/` 开头的站内绝对链接和图片会在 `build.rs` 中统一加 base 前缀；相对路径、外部 URL 和原始 HTML 中的链接不处理。已经带当前 base 的路径不会重复加前缀。
 
 ## 构建命令
 
@@ -99,6 +100,7 @@ dist/
 ├── tag/
 │   ├── rust/index.html
 │   └── ...
+├── images/avatar.png       # 来自内容目录的资源
 └── posts/
     ├── leptos/ssg-guide/index.html
     └── rust/memory-layout/index.html
@@ -118,11 +120,13 @@ dist/
     ├── archive/index.html
     ├── tags/index.html
     ├── tag/...
+    ├── images/avatar.png  # 来自内容目录的资源
     └── posts/...
 ```
 
 说明：
 
+- `content/` 中的非 `.md` 资源复制到站点根目录，保留相对路径（子路径部署时是 `dist/maki/`）。
 - `public/` 中的普通资源复制到站点根目录（子路径部署时是 `dist/maki/`）。
 - `.nojekyll`、`CNAME` 是例外，固定复制到 `dist/` 根目录。
 - 子路径部署时，`dist/index.html` 是重定向页，不属于站点子目录。
@@ -135,13 +139,14 @@ dist/
 1. 根据 `base_prefix()` 计算输出根目录。
 2. 如果 `dist/` 存在，**整个删除**。
 3. 创建输出根目录。
-4. 通过 `RouteList::generate(App)` + `into_static_paths()` 枚举静态路由。
-5. 对每个路径调用 `App().to_html()`，写入 `<route>/index.html`。
-6. 合并 `public/styles/*.css` 到 `<out_root>/style.css`。
-7. 递归复制 `public/` 到输出根目录，排除 `styles`。
-8. 把 `.nojekyll`、`CNAME` 复制到 `dist/` 根目录。
-9. 子路径部署时写 `dist/index.html` 重定向页。
-10. 渲染并写入 `<out_root>/404.html`。
+4. 把 `CONTENT_DIR` 中的非 `.md` 资源按相对路径复制到输出根目录。
+5. 通过 `RouteList::generate(App)` + `into_static_paths()` 枚举静态路由。
+6. 对每个路径调用 `App().to_html()`，写入 `<route>/index.html`。
+7. 合并 `public/styles/*.css` 到 `<out_root>/style.css`。
+8. 递归复制 `public/` 到输出根目录，排除 `styles`。
+9. 把 `.nojekyll`、`CNAME` 复制到 `dist/` 根目录。
+10. 子路径部署时写 `dist/index.html` 重定向页。
+11. 渲染并写入 `<out_root>/404.html`。
 
 注意：第 2 步删除的是整个 `dist/`，不是只删除当前 base 对应的子目录。不要在其他流程中把需要保留的文件放进 `dist/`。
 
@@ -269,6 +274,7 @@ cargo run
 | `failed to parse frontmatter` | 文章 YAML 格式错误或缺少 `title` | 修正 frontmatter；文章 `title` 必填 |
 | `assertion failed: self.is_char_boundary(new_len)` | 未写 `summary`，自动摘要按 200 字节截断时切在多字节字符中间 | 为文章显式填写 `summary` |
 | `route path ... not prefixed by base ...` | 路由生成结果与 base 不一致，通常是自定义路由/参数逻辑有误 | 检查路由是否由 `App` 的 `Router base` 生成 |
-| 子路径部署后链接 404 | Markdown 正文写了 `/foo` 这类绝对链接，未加 base | 改用相对链接，或手动写成 `/maki/foo` |
+| 子路径部署后裸 HTML 中的链接 404 | 原始 HTML 里的 URL 不会被改写 | 手动写成 `/maki/foo`，或改用 Markdown 语法 |
+| 图片或附件 404 | 资源不在内容目录/`public/` 中，或 Markdown 路径写错 | 确认 `dist/` 中存在对应文件；内容目录中的非 `.md` 文件按相对路径复制，隐藏项和 `.md` 不复制 |
 | 页面没有样式 | `style.css` 未生成或 base 配置不一致 | 检查 `public/styles`、`merge_styles()` 列表和 `MAKI_BASE_URL` |
 | 修改内容后页面没变 | 未重新运行生成器，或内容目录不是实际使用的目录 | 重新 `cargo run`，确认 `MAKI_CONTENT_DIR` |

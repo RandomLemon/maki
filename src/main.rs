@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use leptos_router::{RouteList, location::RequestUrl};
 use maki::App;
 use maki::base::base_prefix;
+use maki::content::CONTENT_DIR;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -31,6 +32,34 @@ fn copy_dir_all(
             copy_dir_all(entry.path(), dst.as_ref().join(&name), exclude)?;
         } else {
             fs::copy(entry.path(), dst.as_ref().join(&name))?;
+        }
+    }
+    Ok(())
+}
+
+/// 把内容目录中的非 Markdown 资源按相对路径复制到站点根。
+///
+/// - 跳过以 `.` 开头的项(如外部内容仓库的 `.git/`);
+/// - 跳过扩展名为 `md` 的文件,其余文件(含 `.markdown`)视为资源;
+/// - 只复制普通文件,符号链接等特殊文件跳过;
+/// - 源目录缺失时直接返回,与“默认内容目录缺失按空内容构建”保持一致。
+fn copy_content_assets(src: &Path, dst: &Path) -> std::io::Result<()> {
+    if !src.is_dir() {
+        return Ok(());
+    }
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let name = entry.file_name();
+        let name_str = name.to_string_lossy();
+        if name_str.starts_with('.') {
+            continue;
+        }
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_content_assets(&entry.path(), &dst.join(&name))?;
+        } else if ty.is_file() && entry.path().extension().and_then(|s| s.to_str()) != Some("md") {
+            fs::copy(entry.path(), dst.join(&name))?;
         }
     }
     Ok(())
@@ -138,6 +167,9 @@ fn main() {
         fs::remove_dir_all("dist").expect("failed to clean dist directory");
     }
     fs::create_dir_all(&out_root).expect("failed to create output directory");
+
+    // 内容资源先落盘:随后生成的 HTML、style.css 和 public/ 会覆盖同名文件。
+    copy_content_assets(Path::new(CONTENT_DIR), &out_root).expect("failed to copy content assets");
 
     let routes = Owner::new()
         .with(|| {
